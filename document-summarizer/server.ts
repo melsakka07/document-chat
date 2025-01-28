@@ -79,7 +79,7 @@ app.use(express.json())
 app.use(express.static(path.join(__dirname, 'dist')))
 
 const model = new OpenAI({
-  modelName: 'gpt-4o',
+  modelName: 'gpt-3.5-turbo',
   temperature: 0.7,
   openAIApiKey: process.env.OPENAI_API_KEY,
 })
