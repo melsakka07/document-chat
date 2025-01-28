@@ -151,18 +151,20 @@ function App() {
   }, [hasProcessedFile])
 
   return (
-    <div className="min-h-screen bg-base-200 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-base-200 to-base-300 py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary mb-2">Document Summarizer</h1>
-          <p className="text-lg text-base-content/80">
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold text-primary mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
+            Document Summarizer
+          </h1>
+          <p className="text-xl text-base-content/80">
             Upload your document and get an AI-powered summary in seconds
           </p>
         </div>
 
-        <div className="bg-base-100 rounded-box shadow-lg p-6">
+        <div className="bg-base-100 rounded-2xl shadow-2xl p-8">
           {error && (
-            <div className="alert alert-error mb-6" role="alert">
+            <div className="alert alert-error mb-8" role="alert">
               <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -170,9 +172,9 @@ function App() {
             </div>
           )}
 
-          <div className="flex flex-col items-center justify-center border-2 border-dashed border-base-300 rounded-lg p-8 mb-6">
-            <DocumentArrowUpIcon className="w-12 h-12 text-primary mb-4" aria-hidden="true" />
-            <label className="btn btn-primary mb-4">
+          <div className="flex flex-col items-center justify-center border-2 border-dashed border-base-300 rounded-xl p-10 mb-8 bg-base-200/50 hover:bg-base-200 transition-colors duration-200">
+            <DocumentArrowUpIcon className="w-16 h-16 text-primary mb-6" aria-hidden="true" />
+            <label className="btn btn-primary btn-lg glass mb-4 hover:scale-105 transition-transform duration-200">
               Choose File
               <input
                 type="file"
@@ -183,89 +185,91 @@ function App() {
               />
             </label>
             {file && (
-              <div className="text-center">
+              <div className="text-center animate-fadeIn">
                 <p className="text-base-content/80">Selected file:</p>
-                <p className="font-semibold">{file.name}</p>
+                <p className="font-semibold text-lg">{file.name}</p>
               </div>
             )}
           </div>
 
           {file && (
             <>
-              <div className="flex justify-center gap-4 mb-6" role="tablist" aria-label="Document actions">
+              <div className="flex justify-center gap-6 mb-8" role="tablist" aria-label="Document actions">
                 <button
                   id="summarize-tab"
-                  className={`btn btn-outline ${mode === 'summarize' ? 'btn-primary' : ''}`}
-                  onClick={() => handleModeChange('summarize')}
+                  className={`btn btn-lg gap-3 transition-all duration-200 ${
+                    mode === 'summarize' 
+                      ? 'btn-primary shadow-lg hover:shadow-primary/50' 
+                      : 'btn-ghost hover:btn-primary/20'
+                  } ${loading && mode === 'summarize' ? 'loading' : ''}`}
+                  onClick={() => {
+                    handleModeChange('summarize')
+                    if (mode === 'summarize' && !summary) {
+                      handleSummarize()
+                    }
+                  }}
+                  disabled={loading && mode === 'summarize'}
                   role="tab"
                   aria-controls="summarize-panel"
                   aria-selected="true"
+                  data-state={mode === 'summarize' ? 'active' : 'inactive'}
                   tabIndex={mode === 'summarize' ? 0 : -1}
                   type="button"
                 >
-                  <DocumentTextIcon className="w-5 h-5 mr-2" aria-hidden="true" />
-                  Summarize
+                  {loading && mode === 'summarize' ? (
+                    'Summarizing...'
+                  ) : (
+                    <>
+                      <DocumentTextIcon className="w-6 h-6" aria-hidden="true" />
+                      Summarize
+                    </>
+                  )}
                 </button>
                 <button
                   id="chat-tab"
-                  className={`btn btn-outline ${mode === 'chat' ? 'btn-primary' : ''}`}
+                  className={`btn btn-lg gap-3 transition-all duration-200 ${
+                    mode === 'chat' 
+                      ? 'btn-primary shadow-lg hover:shadow-primary/50' 
+                      : 'btn-ghost hover:btn-primary/20'
+                  }`}
                   onClick={() => handleModeChange('chat')}
                   disabled={!hasProcessedFile}
                   role="tab"
                   aria-controls="chat-panel"
                   aria-selected="false"
+                  data-state={mode === 'chat' ? 'active' : 'inactive'}
                   tabIndex={mode === 'chat' ? 0 : -1}
                   type="button"
                 >
-                  <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2" aria-hidden="true" />
+                  <ChatBubbleLeftRightIcon className="w-6 h-6" aria-hidden="true" />
                   Chat
                 </button>
               </div>
 
-              {mode === 'summarize' && (
+              {mode === 'summarize' && summary && (
                 <div id="summarize-panel" role="tabpanel" aria-labelledby="summarize-tab">
-                  <div className="flex justify-center">
-                    <button
-                      className={`btn btn-primary btn-lg ${loading ? 'btn-disabled' : ''}`}
-                      onClick={handleSummarize}
-                      disabled={loading}
-                      type="button"
-                    >
-                      {loading ? (
-                        <>
-                          <span className="loading loading-spinner" aria-hidden="true"></span>
-                          <span>Summarizing...</span>
-                        </>
-                      ) : (
-                        'Summarize Document'
-                      )}
-                    </button>
-                  </div>
-
-                  {summary && (
-                    <div className="mt-8">
-                      <div className="flex items-center gap-2 mb-4">
-                        <DocumentTextIcon className="w-6 h-6 text-primary" aria-hidden="true" />
-                        <h2 className="text-xl font-semibold">Summary</h2>
-                      </div>
-                      <div className="bg-base-200 rounded-lg p-6">
-                        <p className="whitespace-pre-wrap">{summary}</p>
-                      </div>
+                  <div className="mt-8 animate-fadeIn">
+                    <div className="flex items-center gap-3 mb-4">
+                      <DocumentTextIcon className="w-8 h-8 text-primary" aria-hidden="true" />
+                      <h2 className="text-2xl font-bold">Summary</h2>
                     </div>
-                  )}
+                    <div className="bg-base-200 rounded-xl p-8 shadow-inner">
+                      <p className="whitespace-pre-wrap text-lg leading-relaxed">{summary}</p>
+                    </div>
+                  </div>
                 </div>
               )}
 
               {mode === 'chat' && hasProcessedFile && (
                 <div id="chat-panel" role="tabpanel" aria-labelledby="chat-tab">
                   <div className="mt-8">
-                    <div className="flex items-center gap-2 mb-4">
-                      <ChatBubbleLeftRightIcon className="w-6 h-6 text-primary" aria-hidden="true" />
-                      <h2 className="text-xl font-semibold">Chat with Document</h2>
+                    <div className="flex items-center gap-3 mb-4">
+                      <ChatBubbleLeftRightIcon className="w-8 h-8 text-primary" aria-hidden="true" />
+                      <h2 className="text-2xl font-bold">Chat with Document</h2>
                     </div>
                     <div 
                       ref={chatContainerRef}
-                      className="bg-base-200 rounded-lg p-6 mb-4 h-[400px] overflow-y-auto scroll-smooth"
+                      className="bg-base-200 rounded-xl p-6 mb-4 h-[400px] overflow-y-auto scroll-smooth shadow-inner"
                       aria-live="polite"
                       aria-atomic="true"
                     >
@@ -275,7 +279,11 @@ function App() {
                           className={`chat ${message.role === 'user' ? 'chat-end' : 'chat-start'} mb-4`}
                         >
                           <div 
-                            className={`chat-bubble ${message.role === 'user' ? 'chat-bubble-primary' : ''}`}
+                            className={`chat-bubble ${
+                              message.role === 'user' 
+                                ? 'chat-bubble-primary shadow-lg' 
+                                : 'bg-base-300 shadow'
+                            }`}
                             aria-label={message.role === 'assistant' ? 'Assistant response' : 'Your message'}
                           >
                             {message.content}
@@ -284,7 +292,7 @@ function App() {
                       ))}
                       {loading && (
                         <div className="chat chat-start">
-                          <div className="chat-bubble">
+                          <div className="chat-bubble bg-base-300">
                             <span className="loading loading-dots" aria-hidden="true"></span>
                             <span className="sr-only">Loading response...</span>
                           </div>
@@ -292,7 +300,7 @@ function App() {
                       )}
                     </div>
                     <form 
-                      className="flex gap-2" 
+                      className="flex gap-3" 
                       onSubmit={(e) => {
                         e.preventDefault()
                         if (!loading) handleSendMessage()
@@ -302,7 +310,7 @@ function App() {
                         ref={inputRef}
                         type="text"
                         placeholder="Ask a question about your document..."
-                        className="input input-bordered flex-1"
+                        className="input input-bordered input-lg flex-1 shadow-sm focus:shadow-lg transition-shadow duration-200"
                         value={currentMessage}
                         onChange={(e) => setCurrentMessage(e.target.value)}
                         disabled={loading}
@@ -310,7 +318,7 @@ function App() {
                       />
                       <button
                         type="submit"
-                        className={`btn btn-primary ${loading ? 'btn-disabled' : ''}`}
+                        className="btn btn-primary btn-lg glass hover:scale-105 transition-transform duration-200"
                         disabled={loading}
                         aria-label="Send message"
                       >
