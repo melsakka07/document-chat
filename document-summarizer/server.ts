@@ -18,6 +18,10 @@ dotenv.config()
 interface ChatRequest {
   message: string
   fileId: string
+  chatHistory: Array<{
+    question: string
+    answer: string
+  }>
 }
 
 // Configure multer for file uploads
@@ -75,7 +79,7 @@ app.use(express.json())
 app.use(express.static(path.join(__dirname, 'dist')))
 
 const model = new OpenAI({
-  modelName: 'gpt-3.5-turbo',
+  modelName: 'gpt-4o',
   temperature: 0.7,
   openAIApiKey: process.env.OPENAI_API_KEY,
 })
@@ -142,7 +146,7 @@ app.post('/api/summarize', upload.single('file'), async (req, res, next) => {
 
 app.post('/api/chat', async (req, res, next) => {
   try {
-    const { message, fileId } = req.body as ChatRequest
+    const { message, fileId, chatHistory = [] } = req.body as ChatRequest
 
     if (!message?.trim() || !fileId) {
       return res.status(400).json({ error: 'Message and fileId are required' })
@@ -168,18 +172,25 @@ app.post('/api/chat', async (req, res, next) => {
         questionGeneratorTemplate: `Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question that captures all relevant context from the conversation.
 
         Chat History:
-        {chat_history}
+        ${chatHistory.map(h => `Human: ${h.question}\nAssistant: ${h.answer}`).join('\n')}
         
-        Follow Up Input: {question}
+        Current question: {question}
         
-        Standalone question:`,
+        Standalone question with context:`,
       }
     )
+
+    // Format chat history for LangChain
+    const formattedHistory = chatHistory.reduce((acc: string[], exchange) => {
+      acc.push(`Human: ${exchange.question}`)
+      acc.push(`Assistant: ${exchange.answer}`)
+      return acc
+    }, [])
 
     // Get the response
     const response = await chain.call({
       question: message,
-      chat_history: [], // You could store and pass chat history if needed
+      chat_history: formattedHistory.join('\n')
     })
 
     res.json({ 

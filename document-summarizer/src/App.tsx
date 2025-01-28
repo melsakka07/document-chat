@@ -9,6 +9,11 @@ interface Message {
   timestamp: number
 }
 
+interface ChatHistory {
+  question: string
+  answer: string
+}
+
 function App() {
   const [file, setFile] = useState<File | null>(null)
   const [fileId, setFileId] = useState<string | null>(null)
@@ -19,6 +24,7 @@ function App() {
   const [currentMessage, setCurrentMessage] = useState('')
   const [hasProcessedFile, setHasProcessedFile] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [] = useState<ChatHistory[]>([])
   
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -105,6 +111,20 @@ function App() {
     setError(null)
 
     try {
+      // Get the last 4 messages (2 exchanges) for context
+      const recentMessages = messages.slice(-4)
+      const formattedHistory = []
+      
+      // Format messages into question-answer pairs
+      for (let i = 0; i < recentMessages.length - 1; i += 2) {
+        if (recentMessages[i].role === 'user' && recentMessages[i + 1]?.role === 'assistant') {
+          formattedHistory.push({
+            question: recentMessages[i].content,
+            answer: recentMessages[i + 1].content
+          })
+        }
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -113,6 +133,7 @@ function App() {
         body: JSON.stringify({
           message: currentMessage,
           fileId: fileId,
+          chatHistory: formattedHistory
         }),
       })
 
