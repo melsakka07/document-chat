@@ -24,7 +24,7 @@ function App() {
   const [currentMessage, setCurrentMessage] = useState('')
   const [hasProcessedFile, setHasProcessedFile] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [] = useState<ChatHistory[]>([])
+  const [chatHistory, setChatHistory] = useState<ChatHistory[]>([])
   
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -42,6 +42,31 @@ function App() {
       inputRef.current.focus()
     }
   }, [mode])
+
+  // Handle Enter key in chat input
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && !loading) {
+      e.preventDefault()
+      handleSendMessage()
+    }
+  }
+
+  // Clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [error])
+
+  // Cleanup function for file upload
+  useEffect(() => {
+    return () => {
+      if (file) {
+        URL.revokeObjectURL(URL.createObjectURL(file))
+      }
+    }
+  }, [file])
 
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = event.target.files?.[0]
@@ -95,14 +120,19 @@ function App() {
   }
 
   const handleSendMessage = async () => {
-    if (!currentMessage.trim() || !fileId || !hasProcessedFile) {
+    const trimmedMessage = currentMessage.trim()
+    if (!trimmedMessage || !fileId || !hasProcessedFile) {
       setError('Please summarize the document first before chatting.')
+      return
+    }
+
+    if (loading) {
       return
     }
 
     const newMessage: Message = { 
       role: 'user', 
-      content: currentMessage,
+      content: trimmedMessage,
       timestamp: Date.now()
     }
     setMessages(prev => [...prev, newMessage])
@@ -131,7 +161,7 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: currentMessage,
+          message: trimmedMessage,
           fileId: fileId,
           chatHistory: formattedHistory
         }),
@@ -147,12 +177,17 @@ function App() {
         throw new Error(data.error)
       }
 
+      if (!data.response || typeof data.response !== 'string') {
+        throw new Error('Invalid response format from server')
+      }
+
       const assistantMessage: Message = { 
         role: 'assistant', 
-        content: data.response,
+        content: data.response.trim(),
         timestamp: Date.now()
       }
       setMessages(prev => [...prev, assistantMessage])
+      setChatHistory(formattedHistory)
     } catch (error) {
       console.error('Error sending message:', error)
       setError(error instanceof Error ? error.message : 'Failed to send message')
@@ -285,27 +320,46 @@ function App() {
                     <div 
                       ref={chatContainerRef}
                       className="bg-gradient-to-br from-white to-purple-50 rounded-2xl p-6 mb-4 h-[400px] overflow-y-auto scroll-smooth shadow-inner border border-purple-100"
+                      aria-live="polite"
+                      aria-atomic="true"
+                      role="log"
                     >
+                      {messages.length === 0 && (
+                        <div className="text-center text-gray-500 mt-8">
+                          <p>No messages yet. Start chatting about your document!</p>
+                        </div>
+                      )}
                       {messages.map((message) => (
                         <div
                           key={message.timestamp}
                           className={`chat ${message.role === 'user' ? 'chat-end' : 'chat-start'} mb-4`}
                         >
+                          <div className="chat-header mb-1 text-xs opacity-70">
+                            {message.role === 'user' ? 'You' : 'AI Assistant'}
+                          </div>
                           <div 
                             className={`chat-bubble max-w-[80%] ${
                               message.role === 'user' 
                                 ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg' 
                                 : 'bg-white text-gray-700 shadow border border-purple-100'
                             }`}
+                            role="article"
+                            aria-label={`${message.role === 'user' ? 'Your message' : 'Assistant response'}`}
                           >
                             {message.content}
+                          </div>
+                          <div className="chat-footer mt-1 text-xs opacity-70">
+                            {new Date(message.timestamp).toLocaleTimeString()}
                           </div>
                         </div>
                       ))}
                       {loading && (
                         <div className="chat chat-start">
+                          <div className="chat-header mb-1 text-xs opacity-70">
+                            AI Assistant
+                          </div>
                           <div className="chat-bubble bg-white text-gray-700 shadow border border-purple-100">
-                            <span className="loading loading-dots loading-md"></span>
+                            <span className="loading loading-dots loading-md" aria-label="Assistant is typing"></span>
                           </div>
                         </div>
                       )}
@@ -324,12 +378,15 @@ function App() {
                         className="input input-bordered input-lg flex-1 bg-white shadow-sm hover:shadow-md focus:shadow-lg transition-all duration-300 border-purple-100 focus:border-purple-300 placeholder-gray-400"
                         value={currentMessage}
                         onChange={(e) => setCurrentMessage(e.target.value)}
+                        onKeyDown={handleKeyPress}
                         disabled={loading}
+                        aria-label="Chat message input"
                       />
                       <button
                         type="submit"
-                        className="btn btn-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
-                        disabled={loading}
+                        className="btn btn-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={loading || !currentMessage.trim()}
+                        aria-label="Send message"
                       >
                         Send
                       </button>
